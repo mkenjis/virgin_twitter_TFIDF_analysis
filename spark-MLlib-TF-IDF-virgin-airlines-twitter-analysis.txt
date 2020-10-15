@@ -1,23 +1,46 @@
-val tweets = spark.read.format("csv").option("sep",",").option("quoteAll","true").load("virgin-twitter/virgin-tweets-noheader.csv").rdd
 
-val rdd1 = tweets.map( x => x.toSeq).map( x => x.toArray)
+val tweets = spark.read.format("csv").option("header","true").option("quoteAll","true").load("virgin-twitter/virgin-tweets.csv")
+
+scala> tweets.printSchema
+root
+ |-- tweet_id: string (nullable = true)
+ |-- airline_sentiment: string (nullable = true)
+ |-- airline_sentiment_confidence: string (nullable = true)
+ |-- negativereason: string (nullable = true)
+ |-- negativereason_confidence: string (nullable = true)
+ |-- airline: string (nullable = true)
+ |-- airline_sentiment_gold: string (nullable = true)
+ |-- name: string (nullable = true)
+ |-- negativereason_gold: string (nullable = true)
+ |-- retweet_count: string (nullable = true)
+ |-- text: string (nullable = true)
+ |-- tweet_coord: string (nullable = true)
+ |-- tweet_created: string (nullable = true)
+ |-- tweet_location: string (nullable = true)
+ |-- user_timezone: string (nullable = true)
+ 
+val rdd1 = tweets.rdd.map( x => x.toSeq).map( x => x.toArray)
+
+rdd1.take(5)
+res3: Array[Array[Any]] = Array(Array(570306133677760513, neutral, 1.0, null, null, Virgin America, null, cairdin, null, 0, @VirginAmerica What @dhepburn said., null, 2015-02-24 11:35:52 -0800, null, Eastern Time (US & Canada)), Array(570301130888122368, positive, 0.3486, null, 0.0, Virgin America, null, jnardino, null, 0, @VirginAmerica plus you've added commercials to the experience... tacky., null, 2015-02-24 11:15:59 -0800, null, Pacific Time (US & Canada)), Array(570301083672813571, neutral, 0.6837, null, null, Virgin America, null, yvonnalynn, null, 0, @VirginAmerica I didn't today... Must mean I need to take another trip!, null, 2015-02-24 11:15:48 -0800, Lets Play, Central Time (US & Canada)), Array(570301031407624196, negative, 1.0, Bad Flight, 0.7033, Virgin America, null, jna...
 
 ------------------ use this code to identify offenders
 
 import scala.util.Try
 
-val rdd3 = rdd1.filter( x => {
+rdd1.filter( x => {
   ! Try { x(0).toString.toLong }.isSuccess
  }).count
  
 ------------------
 
 val categories = rdd1.map(x => x(1)).distinct.zipWithIndex.collect.toMap
+categories: scala.collection.immutable.Map[Any,Long] = Map(positive -> 0, negative -> 1, neutral -> 2)
 
-val rdd2 = rdd1.map( x => Array(x(10).toString,x(1).toString))
+val rdd = rdd1.map( x => Array(x(10).toString,x(1).toString))
 
 -- remove nonword characters (such as punctuation).
-val nonWordSplit = rdd2.flatMap(x => x(0).split("""\W+""").map(_.toLowerCase))
+val nonWordSplit = rdd.flatMap(x => x(0).split("""\W+""").map(_.toLowerCase))
 nonWordSplit.sample(true, 0.3, 42).take(100).mkString(",")
 nonWordSplit.distinct.count  // 15058
 
@@ -66,11 +89,11 @@ def tokenize(line: String): Seq[String] = {
  .toSeq
 }
 
-rdd2.flatMap(x => tokenize(x(0))).distinct.count
+rdd.flatMap(x => tokenize(x(0))).distinct.count
 res27: Long = 5792
 
 
-val sets = rdd2.randomSplit(Array(0.8,0.2))
+val sets = rdd.randomSplit(Array(0.8,0.2))
 val trainSet = sets(0)
 val testSet = sets(1)
 
@@ -107,27 +130,6 @@ val v2 = tfidf.first.asInstanceOf[SV]
 println(v2.values.size)
 println(v2.values.take(10).toSeq)
 println(v2.indices.take(10).toSeq)
-
----------------------
-
--- TF-IDF weighting will tend to assign a lower weighting to common terms. To see
- - this, we can compute the TF-IDF representation for a few of the terms that appear in
--- the list of top occurrences that we previously computed, such as you, do, and we:
-
-val common = sc.parallelize(Seq(Seq("you", "do", "we")))
-val tfCommon = hashingTF.transform(common)
-val tfidfCommon = idf.transform(tfCommon)
-val commonVector = tfidfCommon.first.asInstanceOf[SV]
-println(commonVector.values.toSeq)
-
---  let's apply the same transformation to a few less common terms that we might
--- intuitively associate with being more linked to specific topics or concepts:
-
-val uncommon = sc.parallelize(Seq(Seq("telescope", "legislation", "investment")))
-val tfUncommon = hashingTF.transform(uncommon)
-val tfidfUncommon = idf.transform(tfUncommon)
-val uncommonVector = tfidfUncommon.first.asInstanceOf[SV]
-println(uncommonVector.values.toSeq)
 
 --------------------------------
 

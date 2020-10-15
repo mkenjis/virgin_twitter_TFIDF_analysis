@@ -1,5 +1,7 @@
 # virgin_twitter_analysis_using_TFIDF
 virgin airlines tweets analysis using TFIDF
+- Source : Kaggle Dataset
+- URL : https://www.kaggle.com/crowdflower/twitter-airline-sentiment
 
 # Purpose: 
 - use TF-IDF data processing and feature extraction for relevant words
