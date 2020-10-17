@@ -1,4 +1,4 @@
-# virgin_twitter_analysis_using_TFIDF
+# virgin_twitter_TFIDF_analysis
 virgin airlines tweets analysis using TFIDF
 - Source : Kaggle Dataset
 - URL : https://www.kaggle.com/crowdflower/twitter-airline-sentiment
